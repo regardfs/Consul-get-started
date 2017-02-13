@@ -1,0 +1,55 @@
+HEALTH CHECKS
+
+1. Defining Checks
+
+{"service":
+  { "name": "web",
+    "tags": ["django"],
+    "port": 8002,
+    "check":
+      {
+        "script": "curl http://172.17.8.101:8002/ >/dev/null 2>&1",
+        "interval": "10s"
+      }
+  }
+}
+
+when stop web(tag: django) service, it will result msg of:
+    2017/02/13 09:18:07 [WARN] agent: Check 'service:web' is now critical
+    2017/02/13 09:18:07 [INFO] agent: Synced check 'service:web'
+
+2. Checking Health Status by http api
+
+Now that we've added some simple checks, we can use the HTTP API to inspect them. First, we can look for any failing
+checks using this command (note, this can be run on either node):
+
+>>> root@vm-01:/usr/local/consul/consul.dcurl http://localhost:8500/v1/health/state/critical
+[{"Node":"vm-01","CheckID":"service:web","Name":"Service 'web' check","Status":"critical","Notes":"","Output":"",
+"ServiceID":"web","ServiceName":"web","CreateIndex":403,"ModifyIndex":438}]
+
+3. Checking Health Status by DNS
+
+Additionally, we can attempt to query the web service using DNS. Consul will not return any results since the service is
+ unhealthy:
+
+root@vm-01:/usr/local/consul/consul.d# dig @127.0.0.1 -p 8600 web.service.consul
+
+; <<>> DiG 9.9.5-3ubuntu0.11-Ubuntu <<>> @127.0.0.1 -p 8600 web.service.consul
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 65403
+;; flags: qr aa rd; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+;; WARNING: recursion requested but not available
+
+;; QUESTION SECTION:
+;web.service.consul.		IN	A
+
+;; ANSWER SECTION:
+web.service.consul.	0	IN	A	172.17.8.101
+
+;; Query time: 5 msec
+;; SERVER: 127.0.0.1#8600(127.0.0.1)
+;; WHEN: Mon Feb 13 09:29:45 UTC 2017
+;; MSG SIZE  rcvd: 52
+
